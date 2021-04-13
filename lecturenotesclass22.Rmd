@@ -1,0 +1,377 @@
+---
+title: "Functions, automation, and iterations"
+author: ""
+date: "April 14, 2021"
+output: html_document
+editor_options: 
+  chunk_output_type: console
+---
+
+## Packages
+
+We will be using tidyverse packages again today. The `purrr` package inside tidyverse is particularly useful for working with functions and vectors.
+
+```{r packages, echo =TRUE, message = FALSE}
+library(tidyverse)
+```
+
+# Functions
+
+## When should you write a function?
+
+Whenever you’ve copied and pasted a block of code more than twice.
+
+## Why functions?
+
+- Automating common tasks is more powerful, general, and reproducible than copy pasting.
+  - You can give the function an informative name that makes the code easier to understand
+  - As requirements change, you only need to update code in one place, not many.
+  - You reduce the chances of making a coding error (update in one place but not another)
+- Down the line: Improve your reach as a data scientist by writing functions 
+(and packages!) that others use
+
+## Rescaling
+
+```{r data, eval = FALSE}
+ex_data
+```
+
+```{r rnorm, echo = FALSE}
+set.seed(12345)
+ex_data <- tibble(
+  a = rnorm(5),
+  b = rnorm(5),
+  c = rnorm(5),
+  d = rnorm(5)
+)
+ex_data
+```
+
+Suppose we want to normalize the data so it lives between 0 and 1.
+
+$$\dfrac{x_i - \text{min}(x)}{\text{max}(x) - \text{min}(x)}$$
+
+## Rescaling
+
+```{r rescale}
+ex_data <- ex_data %>% 
+  mutate(a = (a - min(a))/(max(a) - min(a)),
+  b = (b - min(b))/(max(b) - min(b)),
+  c = (c - min(c))/(max(c) - min(c)),
+  d = (d - min(d))/(max(d) - min(d)))
+```
+
+## Functions
+
+Don't write code from scratch - start from working code. 
+
+```{r function, eval = FALSE}
+(a - min(a))/(max(a) - min(a))
+```
+
+**Question**: How many inputs does this code have?
+
+## Functions
+
+Choose an informative name (more on this in a minute).
+
+```{r name, eval = FALSE}
+rescale01 <- function
+```
+
+Use `function` to define a function.
+
+Specify the inputs **arguments** inside function. More arguments can be 
+included and separated by commas (`function(x, y, z)`).
+
+```{r args, eval = FALSE}
+rescale01 <- function(x)
+```
+
+Create the body of the function using a `{}` block immediately following `function`.
+
+```{r body, eval = FALSE}
+rescale01 <- function(x){
+  
+  # code goes here
+  
+}
+```
+
+
+```{r rescale_function, eval = TRUE}
+rescale01 <- function(x){
+  
+  (x - min(x)) / (max(x) - min(x))
+  
+}
+```
+
+## Test `rescale01`
+
+```{r result}
+x <- 1:10
+rescale01(x)
+```
+
+```{r NAs}
+x <- c(1:10, NA)
+rescale01(x)
+```
+
+What's going on?
+
+```{r addressNA, eval = TRUE}
+rescale01 <- function(x){
+  
+  (x - min(x)) / (max(x) - min(x))
+  
+}
+```
+
+## Address `NA` 
+
+```{r fixedNA}
+rescale01a <- function(x) {
+  rangex <- max(x, na.rm = TRUE) - min(x, na.rm = TRUE)
+  (x - min(x, na.rm = TRUE)) / rangex
+}
+```
+
+
+```{r rescalingNA}
+x <- 1:10
+rescale01a(x)
+```
+
+```{r resultNA}
+x <- c(1:10, NA)
+rescale01a(x)
+```
+
+## What goes in / what comes out?
+
+- Functions take input(s) defined in the function definition.
+
+```{r inputs, eval=FALSE}
+do_something <- function(x, y, z){
+  # what to do with those inputs
+}
+```
+
+- By default they return the last value computed in the function.
+
+```{r returnlastvalue, eval=FALSE}
+ do_something <- function(x, y, z){
+  # do bunch of stuff with the input...
+  
+  # return a tibble
+  tibble(...)
+}
+```
+
+- You can define more outputs to be returned in a list as well as nice print 
+methods (but we won't go there for now...)
+
+## What goes in / what comes out?
+
+```{r example_1}
+add_2 <- function(x){
+  x + 2
+  2000
+}
+```
+
+
+```{r example_2}
+add_2(2)
+```
+
+```{r example_3}
+add_2(100)
+```
+
+```{r example_4}
+add_2(24)
+```
+
+## Clean Coding
+
+Code should express intent, use the correct parts of speech, have the length 
+correspond to scope, and contain no disinformation (Martin 2008).
+
+For variables, what is it? For functions, what does it do? These should be expressed in the name of the variable or function.
+
+**Variables are nouns**, **functions are verbs**, and **predicates (T/F) are predicates**. They should be named as such.
+
+Small scope variables should have short names and longer scope variables should have long names. 
+
+The opposite is true for functions. Small scope functions should have long names, and long scope functions should have short names.[Martin](https://www.informit.com/articles/article.aspx?p=1323426) why here.
+
+## Other Conventions
+
+Multiword names should be separated by underscores (`snake_case` not `CamelCase`).
+
+Families of functions should be named similarly (`str_trim`, `str_sub`, `str_remove`).
+
+Use consistent naming conventions.
+
+Don't overwrite existing functions or variables.
+
+```{r overwrite, eval = FALSE}
+mean <- function(x){
+  sum(x)
+}
+T <- FALSE
+c <- 25
+```
+
+# Automation
+
+## Mapping
+
+**Mapping** allows us to apply a function to each element of an object and
+return a specific type of value.
+
+Suppose we have exam 1 and exam 2 scores of 4 students stored in a list...
+
+```{r list}
+exam_scores <- list(
+  exam1 <- c(80, 90, 70, 50),
+  exam2 <- c(85, 83, 45, 60)
+)
+```
+
+...and we find the mean score in each exam
+
+```{r scores}
+map(exam_scores, mean)
+```
+
+## Mapping
+
+...and suppose we want the results as a numeric (double) vector
+
+```{r vector}
+map_dbl(exam_scores, mean)
+```
+
+...or as a character string
+
+```{r string}
+map_chr(exam_scores, mean)
+```
+
+## Mapping
+
+- `map()`: - returns a list
+- `map_lgl()`: - returns a logical vector
+- `map_int()`: - returns an integer vector
+- `map_dbl()`: - returns a double vector
+- `map_chr()`: - returns a character vector
+- `map_df()` / `map_dfr()`: returns a data frame by row binding
+- `map_dfc()`: returns a data frame by column binding
+
+## Mapping
+
+```{r data2}
+ex_data
+```
+
+```{r map_dbl}
+map_dbl(ex_data, mean)
+map_dbl(ex_data, median)
+map_dbl(ex_data, sd)
+```
+## Mapping
+
+```{r mtcars}
+glimpse(mtcars)
+```
+
+Find the number of distinct observations in each column.
+
+```{r num_obs}
+mtcars %>% 
+  map_int(n_distinct)
+```
+
+## Iteration
+
+**Question**: 
+How can we tell R to apply the a function?
+
+- Option 1: **Map** the function to each element and let R take care of the storing and appending of results.
+
+- Option 2: Write a **for loop**, i.e. explicitly tell R to apply the function, store the result, then visit the next item, apply the function, append the result to the stored result from the previous link, and so on and so forth.
+
+## For loops
+
+## Example
+
+The song [There's a Platypus Controlling Me](https://phineasandferb.fandom.com/wiki/There%27s_a_Platypus_Controlling_Me) is a classic from the show Phineas an Ferb. At one point in the song, there is a list of repeated things that are platypuses (platypi?...[platypodes?](https://platypus.asn.au/faqs/#:~:text=According%20to%20our%20copy%20of,%E2%80%9D%20should%20be%20%E2%80%9Cplatypodes%E2%80%9D.)).
+
+Specifically:
+"The government's a platypus
+Your teacher is a platypus...
+Society's a platypus
+My parents are a platypus
+The media's a platypus"
+
+We can use a for loop to make a list of everything that is a platypus. First, we will create a vector of all the things that are platypi and then use a for loop to go to each item in this list and then print out the words here plus "a platypus."
+
+```{r for_loops}
+items <- c('The government\'s', 
+          'Your teacher is', 
+          'Society', 
+          'My parents are',
+          'The media\'s')
+for (i in items){ 
+ print(paste(i, "a platypus"))
+}
+```
+
+## A second example
+
+You can also use for loops to carry out repeated mathematical operations. For example, you can find the square root of the first 10 positive integers.
+
+```{r sqrts}
+for(i in 1:10) {                                           
+  sqrtx <- sqrt(i)                                             
+  print(sqrtx)                                               
+}
+```
+
+There are much [more complicated things](https://statisticsglobe.com/for-loop-in-r) that you can do with for loops, but this is a good introduction to what they do an what they look like.
+
+## Exercises
+
+1. Create a function that multiplies a number by pi (you can write it out as pi). What is the [area](https://www.wikihow.com/Calculate-the-Area-of-a-Circle) of a circle with a radius of 17?
+
+```{r ex-1}
+
+```
+
+2. Return to the `mtcars` dataset and use a mapping command to find the mean of each column.
+
+```{r ex-2}
+
+```
+
+3. The Robert Frost poem [Acquainted with the Night](https://www.poetryfoundation.org/poems/47548/acquainted-with-the-night) begins "I have been one acquainted with the night.
+I have walked out in rain—and back in rain.
+I have outwalked the furthest city light.
+
+I have looked down the saddest city lane.
+I have passed by the watchman on his beat."
+
+How might you use a for loop to print out the lines of this poem to print out these lines by repeating the start of each line that is the same?
+
+```{r ex-3}
+
+```
+
+## References
+
+Martin, Robert. 2008. "Clean Code: A Handbook of Agile Software Craftsmanship." Upper Saddle River, NJ: Pearson.
+
